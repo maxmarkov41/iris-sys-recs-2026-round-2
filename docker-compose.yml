@@ -1,0 +1,51 @@
+services:
+  application:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    stop_signal: SIGINT # https://docs.docker.com/compose/support-and-feedback/faq/#why-do-my-services-take-10-seconds-to-recreate-or-stop
+    env_file: .env
+    networks:
+      - application
+    expose:
+      - "3000"
+    volumes:
+    - .:/app
+    - /app/tmp/pids
+    deploy:
+      replicas: 3
+    depends_on:
+      - database
+
+  database:
+    image: mysql
+    restart: always # always restart if something happens
+    env_file: .env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+    networks:
+      - application
+    expose:
+      - "3306"
+    volumes:
+      - mysql_data:/var/lib/mysql # volume mapping
+
+  guardian: #nginx
+    image: nginx:alpine
+    networks:
+      - external
+      - application
+    ports:
+      - "80:80"
+      - "443:443" # for https
+    volumes:
+      - ./custom-nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - application
+  
+volumes:
+  mysql_data:
+
+networks:
+  external:
+  application:

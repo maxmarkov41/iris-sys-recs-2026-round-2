@@ -14,8 +14,9 @@ default: &default
   encoding: utf8mb4
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
   username: root
-  password: Gukesh12garry@
-  socket: /var/run/mysqld/mysqld.sock
+  host: <%= ENV.fetch("DB_HOST") { "database" } %>
+  password: <%= ENV.fetch("DB_PASSWORD") %>
+  # socket: /var/run/mysqld/mysqld.sock
 
 development:
   <<: *default
@@ -52,4 +53,4 @@ production:
   <<: *default
   database: iris_systems_rec_task_production
   username: iris_systems_rec_task
-  password: <%= ENV["IRIS_SYSTEMS_REC_TASK_DATABASE_PASSWORD"] %>
+  password: <%= ENV["DB_PASSWORD"] %>
