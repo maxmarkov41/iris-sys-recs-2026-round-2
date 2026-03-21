@@ -40,12 +40,66 @@ services:
       - "443:443" # for https
     volumes:
       - ./custom-nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./.htpasswd:/etc/nginx/.htpasswd
     depends_on:
-      - application
+      application:
+        condition: service_started
+      prometheus:
+        condition: service_healthy
+      grafana:
+        condition: service_healthy
+    restart: always
   
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus
+    networks:
+      - application
+      - monitoring
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prom_data:/prometheus
+    expose:
+      - "9090"
+    healthcheck:
+          # Pings the built-in healthy endpoint. If it fails, it returns exit code 1.
+          test: ["CMD-SHELL", "wget -q --tries=1 --spider http://localhost:9090/-/healthy || exit 1"]
+          interval: 10s    # How often to check
+          timeout: 5s      # How long to wait for a response
+          retries: 5       # How many times to fail before marking it "unhealthy"
+          start_period: 5s # Give the container a few seconds to boot before checking
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    healthcheck:
+          test: ["CMD-SHELL", "wget -q --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+          interval: 10s
+          timeout: 5s
+          retries: 5
+          start_period: 5s
+    expose:
+      - "3000"
+    networks:
+      - application
+      - monitoring
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
+    volumes:
+      - ./grafana:/etc/grafana/provisioning/datasources/
+    depends_on:
+      - prometheus
+# https://github.com/docker/awesome-compose/blob/master/prometheus-grafana/compose.yaml
+
 volumes:
   mysql_data:
+  prom_data:
 
 networks:
   external:
   application:
+  monitoring:
